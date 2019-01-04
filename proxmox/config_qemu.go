@@ -132,10 +132,7 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 		"full":    fullclone,
 	}
 	_, err = client.CloneQemuVm(sourceVmr, params)
-	if err != nil {
-		return
-	}
-	return config.UpdateConfig(vmr, client)
+	return
 }
 
 func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
