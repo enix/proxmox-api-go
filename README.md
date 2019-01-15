@@ -1,9 +1,7 @@
-# Proxmox API Go
-
+# Proxmox API Go for Proxmox 5.3 onwards
 
 Proxmox API in golang. For /api2/json. Work in progress.
-
-Starting with Proxmox 5.2 you can use clout-init options.
+This is a fork of Telmate's work, with a particular focus on cloud-init based images.
 
 ## Build
 
