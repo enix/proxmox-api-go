@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+const HiddenPassword = "**********"
+
 type (
 	QemuDevices     map[int]map[string]interface{}
 	QemuDevice      map[string]interface{}
