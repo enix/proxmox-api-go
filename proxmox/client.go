@@ -21,6 +21,8 @@ const TaskTimeout = 300
 // TaskStatusCheckInterval - time between async checks in seconds
 const TaskStatusCheckInterval = 2
 
+const HttpTimeout = 30
+
 const exitStatusSuccess = "OK"
 
 // Client - URL, user and password to specifc Proxmox node

@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"time"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -38,7 +39,7 @@ func NewSession(apiUrl string, hclient *http.Client, tls *tls.Config) (session *
 			TLSClientConfig:    tls,
 			DisableCompression: true,
 		}
-		hclient = &http.Client{Transport: tr}
+		hclient = &http.Client{Transport: tr, Timeout: time.Duration(HttpTimeout * time.Second)}
 	}
 	session = &Session{
 		httpClient: hclient,
