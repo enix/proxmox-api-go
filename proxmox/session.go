@@ -32,23 +32,28 @@ type Session struct {
 	Headers    http.Header
 }
 
-func NewSession(apiUrl string, hclient *http.Client, tls *tls.Config) (session *Session, err error) {
-	if hclient == nil {
+func NewSession(configuration *Configuration, httpClient *http.Client) (session *Session, err error) {
+	tlsConfig := &tls.Config{}
+	if configuration.TlsInsecure {
+		tlsConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
+	if httpClient == nil {
 		// Only build a transport if we're also building the client
 		tr := &http.Transport{
-			TLSClientConfig:    tls,
+			TLSClientConfig:    tlsConfig,
 			DisableCompression: true,
 		}
-		hclient = &http.Client{Transport: tr, Timeout: time.Duration(HttpTimeout * time.Second)}
+		httpClient = &http.Client{Transport: tr, Timeout: time.Duration(HttpTimeout * time.Second)}
 	}
 	session = &Session{
-		httpClient: hclient,
-		ApiUrl:     apiUrl,
+		httpClient: httpClient,
+		ApiUrl:     configuration.Url,
 		AuthTicket: "",
 		CsrfToken:  "",
 		Headers:    http.Header{},
 	}
-	return session, nil
+	return
 }
 
 func ParamsToBody(params map[string]interface{}) (body []byte) {
@@ -90,7 +95,7 @@ func (s *Session) Login(username string, password string) (err error) {
 	resp, err := s.Post("/access/ticket", nil, nil, &reqbody)
 	*Debug = olddebug
 	if err != nil {
-		return err
+		return
 	}
 	if resp == nil {
 		return errors.New("Login error reading response")

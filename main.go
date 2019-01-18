@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -18,15 +17,17 @@ func main() {
 	proxmox.Debug = flag.Bool("debug", false, "debug mode")
 	fvmid := flag.Int("vmid", -1, "custom vmid (instead of auto)")
 	flag.Parse()
-	tlsconf := &tls.Config{InsecureSkipVerify: true}
-	if !*insecure {
-		tlsconf = nil
-	}
-	c, _ := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf)
-	err := c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))
+
+	c, err := proxmox.NewClient(&proxmox.Configuration{
+		Url:			os.Getenv("PROXMOX_URL"),
+		Username:		os.Getenv("PROXMOX_USERNAME"),
+		Password:		os.Getenv("PROXMOX_PASSWORD"),
+		TlsInsecure:	!*insecure,
+		}, true)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	vmid := *fvmid
 	if vmid < 0 {
 		if len(flag.Args()) > 1 {

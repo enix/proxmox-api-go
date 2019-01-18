@@ -3,12 +3,12 @@ package proxmox
 // inspired by https://github.com/Telmate/vagrant-proxmox/blob/master/lib/vagrant-proxmox/proxmox/connection.rb
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
+	"log"
+	"sync"
 	"regexp"
 	"strconv"
 	"strings"
@@ -25,12 +25,21 @@ const HttpTimeout = 30
 
 const exitStatusSuccess = "OK"
 
+type Configuration struct {
+	Url   			string
+	Username		string
+	Password		string
+	TlsInsecure		bool
+	ParallelClone	bool
+	ParallelResize	bool
+}
+
 // Client - URL, user and password to specifc Proxmox node
 type Client struct {
-	session  *Session
-	ApiUrl   string
-	Username string
-	Password string
+	session			*Session
+	configuration	*Configuration
+	cloneMutex		sync.Mutex
+	resizeMutex		sync.Mutex
 }
 
 // VmRef - virtual machine ref parts
@@ -64,19 +73,21 @@ func NewVmRef(vmId int) (vmr *VmRef) {
 	return
 }
 
-func NewClient(apiUrl string, hclient *http.Client, tls *tls.Config) (client *Client, err error) {
+func NewClient(configuration *Configuration, autoLogin bool) (client *Client, err error) {
 	var sess *Session
-	sess, err = NewSession(apiUrl, hclient, tls)
-	if err == nil {
-		client = &Client{session: sess, ApiUrl: apiUrl}
+	sess, err = NewSession(configuration, nil)
+	if err != nil {
+		return
 	}
-	return client, err
+	client = &Client{session: sess, configuration: configuration}
+	if autoLogin {
+		err = client.Login()
+	}
+	return
 }
 
-func (c *Client) Login(username string, password string) (err error) {
-	c.Username = username
-	c.Password = password
-	return c.session.Login(username, password)
+func (c *Client) Login() (err error) {
+	return c.session.Login(c.configuration.Username, c.configuration.Password)
 }
 
 func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, tries int) error {
@@ -223,11 +234,16 @@ func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err
 	node := rxTaskNode.FindStringSubmatch(taskUpid)[1]
 	url := fmt.Sprintf("/nodes/%s/tasks/%s/status", node, taskUpid)
 	var data map[string]interface{}
+	log.Println(">>>>>>>>>> WAIT:", url)
 	_, err = c.session.GetJSON(url, nil, nil, &data)
+	if err != nil {
+		log.Println(">>>>>>>>>> WAIT ERROR:", err)
+	}
 	if err == nil {
 		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
 	}
 	if exitStatus != nil && exitStatus != exitStatusSuccess {
+		log.Println(">>>>>>>>>> WAIT EXIT STATUS ERROR:", exitStatus.(string))
 		err = errors.New(exitStatus.(string))
 	}
 	return
@@ -319,6 +335,10 @@ func (c *Client) CreateQemuVm(node string, vmParams map[string]interface{}) (exi
 func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/clone", vmr.node, vmr.vmId)
+	if !c.configuration.ParallelClone {
+		c.cloneMutex.Lock()
+		defer c.cloneMutex.Unlock()
+	}
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
 	if err == nil {
 		taskResponse := ResponseJSON(resp)
@@ -360,6 +380,11 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 	}
 	size := fmt.Sprintf("+%dG", moreSizeGB)
 	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "size": size})
+	if !c.configuration.ParallelResize {
+		c.resizeMutex.Lock()
+		defer c.resizeMutex.Unlock()
+	}
+
 	url := fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Put(url, nil, nil, &reqbody)
 	if err == nil {
