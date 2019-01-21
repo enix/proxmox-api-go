@@ -234,16 +234,13 @@ func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err
 	node := rxTaskNode.FindStringSubmatch(taskUpid)[1]
 	url := fmt.Sprintf("/nodes/%s/tasks/%s/status", node, taskUpid)
 	var data map[string]interface{}
-	log.Println(">>>>>>>>>> WAIT:", url)
 	_, err = c.session.GetJSON(url, nil, nil, &data)
 	if err != nil {
-		log.Println(">>>>>>>>>> WAIT ERROR:", err)
 	}
 	if err == nil {
 		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
 	}
 	if exitStatus != nil && exitStatus != exitStatusSuccess {
-		log.Println(">>>>>>>>>> WAIT EXIT STATUS ERROR:", exitStatus.(string))
 		err = errors.New(exitStatus.(string))
 	}
 	return
