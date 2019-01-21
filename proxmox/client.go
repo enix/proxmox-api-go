@@ -393,13 +393,14 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 
 // GetNextID - Get next free VMID
 func (c *Client) GetNextID(currentID int) (nextID int, err error) {
-	var data map[string]interface{}
 	var url string
 	if currentID > 0 {
 		url = fmt.Sprintf("/cluster/nextid?vmid=%d", currentID)
 	} else {
 		url = "/cluster/nextid"
 	}
+
+	var data map[string]interface{}
 	_, err = c.session.GetJSON(url, nil, nil, &data)
 	if err == nil {
 		if data["errors"] != nil {
