@@ -401,17 +401,15 @@ func (c *Client) GetNextID(currentID int) (nextID int, err error) {
 
 	var data map[string]interface{}
 	_, err = c.session.GetJSON(url, nil, nil, &data)
-	if err == nil {
-		if data["errors"] != nil {
-			if currentID != 0 {
-				return c.GetNextID(0)
-			} else {
-				return -1, errors.New("error using /cluster/nextid")
-			}
+
+	if err != nil || data["errors"] != nil {
+		if currentID != 0 {
+			return c.GetNextID(0)
+		} else {
+			return -1, errors.New("error using /cluster/nextid")
 		}
-		nextID, err = strconv.Atoi(data["data"].(string))
 	}
-	return
+	return strconv.Atoi(data["data"].(string))
 }
 
 // CreateVMDisk - Create single disk for VM on host node.
