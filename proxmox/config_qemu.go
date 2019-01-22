@@ -540,6 +540,10 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 			macaddr := make(net.HardwareAddr, 6)
 			rand.Seed(time.Now().UnixNano())
 			rand.Read(macaddr)
+			// Force unicast interface
+			macaddr[0] = macaddr[0] & 0xfe
+			// Force locally administered interface
+			macaddr[0] = macaddr[0] | 0x02
 			macAddrUppr := strings.ToUpper(fmt.Sprintf("%v", macaddr))
 			macAddr := fmt.Sprintf("macaddr=%v", macAddrUppr)
 
