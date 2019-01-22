@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"sync"
 	"regexp"
 	"strconv"
@@ -213,6 +214,10 @@ func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExi
 	for waited < TaskTimeout {
 		exitStatus, statErr := c.GetTaskExitstatus(taskUpid)
 		if statErr != nil {
+	        if apiError, ok := statErr.(*ApiError); ok && apiError.Code == ApiErrorTooManyRedirections {
+				log.Println("Facing an error 599 on API, retrying ...")
+				exitStatus = nil
+	        }
 			if statErr != io.ErrUnexpectedEOF { // don't give up on ErrUnexpectedEOF
 				return "", statErr
 			}
@@ -237,7 +242,7 @@ func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err
 	if err != nil {
 		return nil, err
 	}
-		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
+	exitStatus = data["data"].(map[string]interface{})["exitstatus"]
 	if exitStatus != nil && exitStatus != exitStatusSuccess {
 		err = errors.New(exitStatus.(string))
 	}

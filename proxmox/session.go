@@ -19,6 +19,17 @@ import (
 
 var Debug = new(bool)
 
+type ApiError struct {
+    Code    int
+    Message string
+}
+
+func (e *ApiError) Error() string {
+    return fmt.Sprintf("Proxmox API error %d: %s", e.Code, e.Message)
+}
+
+const ApiErrorTooManyRedirections = 599
+
 type Response struct {
 	Resp *http.Response
 	Body []byte
@@ -144,7 +155,7 @@ func (s *Session) Do(req *http.Request) (*http.Response, error) {
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, errors.New(resp.Status)
+		return nil, &ApiError{resp.StatusCode, resp.Status}
 	}
 
 	if *Debug {
