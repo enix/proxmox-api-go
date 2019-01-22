@@ -235,10 +235,9 @@ func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err
 	var data map[string]interface{}
 	_, err = c.session.GetJSON(url, nil, nil, &data)
 	if err != nil {
+		return nil, err
 	}
-	if err == nil {
 		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
-	}
 	if exitStatus != nil && exitStatus != exitStatusSuccess {
 		err = errors.New(exitStatus.(string))
 	}
